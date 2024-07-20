@@ -1,0 +1,47 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Apache HTTP Server
+      run: sudo apt-get update && sudo apt-get install -y apache2
+
+    - name: Copy files to Apache server directory
+      run: sudo cp -r src/* /var/www/html/
+
+    - name: Start Apache HTTP Server
+      run: sudo systemctl start apache2
+
+    - name: Verify deployment
+      run: curl -v http://localhost | grep 'Hello, world!'
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Copy files to remote server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        source: "src/*"
+        target: "/var/www/html/"
+
